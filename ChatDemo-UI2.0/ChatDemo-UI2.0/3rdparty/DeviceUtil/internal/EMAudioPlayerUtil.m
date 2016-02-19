@@ -93,7 +93,7 @@ static EMAudioPlayerUtil *audioPlayerUtil = nil;
     if (error || !_player) {
         _player = nil;
         error = [NSError errorWithDomain:NSLocalizedString(@"error.initPlayerFail", @"Failed to initialize AVAudioPlayer")
-                                    code:EMErrorNotExist
+                                    code:EMErrorFileNotFound
                                 userInfo:nil];
         if (playFinish) {
             playFinish(error);

@@ -241,7 +241,7 @@ typedef NS_ENUM(NSInteger, EMAudioSession){
                                          error:&error];
         if(!success || error){
             error = [NSError errorWithDomain:NSLocalizedString(@"error.initPlayerFail", @"Failed to initialize AVAudioPlayer")
-                                        code:EMErrorNotExist
+                                        code:EMErrorFileNotFound
                                     userInfo:nil];
             return error;
         }

@@ -23,13 +23,15 @@
 #import "EMCDDeviceManager.h"
 #import "RobotManager.h"
 #import "UserProfileManager.h"
+#import "EMSDKFull.h"
+
 //两次提示的默认间隔
 static const CGFloat kDefaultPlaySoundInterval = 3.0;
 static NSString *kMessageType = @"MessageType";
 static NSString *kConversationChatter = @"ConversationChatter";
 static NSString *kGroupName = @"GroupName";
 
-@interface MainViewController () <UIAlertViewDelegate, EMChatManagerDelegate,EMContactManagerDelegate,EMGroupManagerDelegate,EMChatroomManagerDelegate>
+@interface MainViewController () <UIAlertViewDelegate, EMChatManagerDelegate,EMContactManagerDelegate,EMGroupManagerDelegate,EMChatroomManagerDelegate, EMCallManagerDelegate>
 {
     ChatListViewController *_chatListVC;
     ContactsViewController *_contactsVC;
@@ -137,6 +139,10 @@ static NSString *kGroupName = @"GroupName";
     [[EMClient sharedClient].chatManager addDelegate:self delegateQueue:nil];
     [[EMClient sharedClient].contactManager addDelegate:self delegateQueue:nil];
     [[EMClient sharedClient].groupManager addDelegate:self delegateQueue:nil];
+    
+#if DEMO_CALL == 1
+    [[EMClient sharedClient].callManager addDelegate:self delegateQueue:nil];
+#endif
 }
 
 -(void)unregisterNotifications
@@ -144,6 +150,10 @@ static NSString *kGroupName = @"GroupName";
     [[EMClient sharedClient].chatManager removeDelegate:self];
     [[EMClient sharedClient].contactManager removeDelegate:self];
     [[EMClient sharedClient].groupManager removeDelegate:self];
+    
+#if DEMO_CALL == 1
+    [[EMClient sharedClient].callManager removeDelegate:self];
+#endif
 }
 
 - (void)setupSubviews
@@ -260,7 +270,7 @@ static NSString *kGroupName = @"GroupName";
     return bCanRecord;
 }
 
-/*
+
 - (void)callOutWithChatter:(NSNotification *)notification
 {
     id object = notification.object;
@@ -274,18 +284,18 @@ static NSString *kGroupName = @"GroupName";
         EMCallType type = [[object objectForKey:@"type"] intValue];
         EMCallSession *callSession = nil;
         if (type == EMCallTypeVoice) {
-            callSession = [[EMClient sharedClient].callManager asyncMakeVoiceCall:chatter timeout:50 error:&error];
+            callSession = [[EMClient sharedClient].callManager makeVoiceCall:chatter error:&error];
         }
         else if (type == EMCallTypeVideo){
             if (![CallViewController canVideo]) {
                 return;
             }
-            callSession = [[EMClient sharedClient].callManager asyncMakeVideoCall:chatter timeout:50 error:&error];
+            callSession = [[EMClient sharedClient].callManager makeVideoCall:chatter error:&error];
         }
         
         if (callSession && !error) {
             [[EMClient sharedClient].callManager removeDelegate:self];
-            CallViewController *callController = [[CallViewController alloc] initWithUsername:callSession.username status:@"连接建立完成" isCaller:NO];
+            CallViewController *callController = [[CallViewController alloc] initWithSession:callSession isIncoming:NO];
             callController.modalPresentationStyle = UIModalPresentationOverFullScreen;
             [self presentViewController:callController animated:NO completion:nil];
         }
@@ -295,15 +305,15 @@ static NSString *kGroupName = @"GroupName";
             [alertView show];
         }
     }
-}*/
+}
 
 - (void)callControllerClose:(NSNotification *)notification
 {
-//    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-//    [audioSession setCategory:AVAudioSessionCategoryPlayback error:nil];
-//    [audioSession setActive:YES error:nil];
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    [audioSession setCategory:AVAudioSessionCategoryPlayback error:nil];
+    [audioSession setActive:YES error:nil];
  
-//    [[EMClient sharedClient].callManager addDelegate:self delegateQueue:nil];
+    [[EMClient sharedClient].callManager addDelegate:self delegateQueue:nil];
 }
 
 #pragma mark - EMChatManagerDelegate 消息变化
@@ -632,49 +642,45 @@ static NSString *kGroupName = @"GroupName";
 
 #pragma mark - ICallManagerDelegate
 
-/*
-- (void)callSessionStatusChanged:(EMCallSession *)callSession changeReason:(EMCallEndReason)reason error:(EMError *)error
+- (void)didReceiveCallIncoming:(EMCallSession *)aSession
 {
-    if (callSession.status == EMCallSessionStatusConnected)
-    {
-        EMError *error = nil;
-        do {
-            BOOL isShowPicker = [[[NSUserDefaults standardUserDefaults] objectForKey:@"isShowPicker"] boolValue];
-            if (isShowPicker) {
-                error = [EMError errorWithCode:EMErrorInitFailure andDescription:NSLocalizedString(@"call.initFailed", @"Establish call failure")];
-                break;
-            }
-            
-            if (![self canRecord]) {
-                error = [EMError errorWithCode:EMErrorInitFailure andDescription:NSLocalizedString(@"call.initFailed", @"Establish call failure")];
-                break;
-            }
-            
-#warning 在后台不能进行视频通话
-            if(callSession.type == EMCallTypeVideo && ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive || ![CallViewController canVideo])){
-                error = [EMError errorWithCode:EMErrorInitFailure andDescription:NSLocalizedString(@"call.initFailed", @"Establish call failure")];
-                break;
-            }
-            
-            if (!isShowPicker){
-                [[EMClient sharedClient].callManager removeDelegate:self];
-                CallViewController *callController = [[CallViewController alloc] initWithUsername:callSession.username status:@"连接建立完成" isCaller:NO];
-                callController.modalPresentationStyle = UIModalPresentationOverFullScreen;
-                [self presentViewController:callController animated:NO completion:nil];
-                if ([self.navigationController.topViewController isKindOfClass:[ChatViewController class]])
-                {
-                    ChatViewController *chatVc = (ChatViewController *)self.navigationController.topViewController;
-                    chatVc.isInvisible = YES;
-                }
-            }
-        } while (0);
-        
-        if (error) {
-            [[EMClient sharedClient].callManager endCall:callSession.sessionId reason:EMCallEndReasonHangup];
-            return;
+    EMError *error = nil;
+    do {
+        BOOL isShowPicker = [[[NSUserDefaults standardUserDefaults] objectForKey:@"isShowPicker"] boolValue];
+        if (isShowPicker) {
+            error = [EMError errorWithDescription:NSLocalizedString(@"call.initFailed", @"Establish call failure") code:-1];
+            break;
         }
+        
+        if (![self canRecord]) {
+            error = [EMError errorWithDescription:NSLocalizedString(@"call.initFailed", @"Establish call failure") code:-1];
+            break;
+        }
+        
+#warning 在后台不能进行视频通话
+        if(aSession.type == EMCallTypeVideo && ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive || ![CallViewController canVideo])){
+            error = [EMError errorWithDescription:NSLocalizedString(@"call.initFailed", @"Establish call failure") code:-1];
+            break;
+        }
+        
+        if (!isShowPicker){
+            [[EMClient sharedClient].callManager removeDelegate:self];
+            CallViewController *callController = [[CallViewController alloc] initWithSession:aSession isIncoming:YES];
+            callController.modalPresentationStyle = UIModalPresentationOverFullScreen;
+            [self presentViewController:callController animated:NO completion:nil];
+            if ([self.navigationController.topViewController isKindOfClass:[ChatViewController class]])
+            {
+                ChatViewController *chatVc = (ChatViewController *)self.navigationController.topViewController;
+                chatVc.isInvisible = YES;
+            }
+        }
+    } while (0);
+    
+    if (error) {
+        [[EMClient sharedClient].callManager endCall:aSession.sessionId reason:EMCallEndReasonHangup];
+        return;
     }
-}*/
+}
 
 #pragma mark - public
 

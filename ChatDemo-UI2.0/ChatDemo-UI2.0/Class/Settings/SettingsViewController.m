@@ -288,7 +288,7 @@
         EMError *error = [[EMClient sharedClient] logout:YES];
         dispatch_async(dispatch_get_main_queue(), ^{
             [weakSelf hideHud];
-            if (error && error.code != EMErrorServerNotLogin) {
+            if (error && error.code != EMErrorUserNotLogin) {
                 [weakSelf showHint:error.errorDescription];
             }
             else{

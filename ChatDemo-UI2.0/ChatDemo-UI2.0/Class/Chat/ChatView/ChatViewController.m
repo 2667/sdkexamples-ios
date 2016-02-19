@@ -1073,14 +1073,20 @@
 {
     // 隐藏键盘
     [self keyBoardHidden];
-//    [[NSNotificationCenter defaultCenter] postNotificationName:@"callOutWithChatter" object:@{@"chatter":self.chatter, @"type":[NSNumber numberWithInt:EMCallTypeVoice]}];
+    
+#if DEMO_CALL
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"callOutWithChatter" object:@{@"chatter":self.chatter, @"type":[NSNumber numberWithInt:0]}];
+#endif
 }
 
 - (void)moreViewVideoCallAction:(DXChatBarMoreView *)moreView
 {
     // 隐藏键盘
     [self keyBoardHidden];
-//    [[NSNotificationCenter defaultCenter] postNotificationName:@"callOutWithChatter" object:@{@"chatter":self.chatter, @"type":[NSNumber numberWithInt:EMCallTypeVideo]}];
+    
+#if DEMO_CALL
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"callOutWithChatter" object:@{@"chatter":self.chatter, @"type":[NSNumber numberWithInt:1]}];
+#endif
 }
 
 #pragma mark - LocationViewDelegate

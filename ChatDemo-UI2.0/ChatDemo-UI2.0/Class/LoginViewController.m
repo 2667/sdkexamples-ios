@@ -108,7 +108,7 @@
                         case EMErrorUserAlreadyExist:
                             TTAlertNoTitle(NSLocalizedString(@"register.repeat", @"You registered user already exists!"));
                             break;
-                        case EMErrorNerworkUnavailable:
+                        case EMErrorNetworkUnavailable:
                             TTAlertNoTitle(NSLocalizedString(@"error.connectNetworkFail", @"No network connection!"));
                             break;
                         case EMErrorServerTimeout:
@@ -156,10 +156,10 @@
             } else {
                 switch (error.code)
                 {
-                    case EMErrorNotExist:
+                    case EMErrorUserNotFound:
                         TTAlertNoTitle(error.errorDescription);
                         break;
-                    case EMErrorNerworkUnavailable:
+                    case EMErrorNetworkUnavailable:
                         TTAlertNoTitle(NSLocalizedString(@"error.connectNetworkFail", @"No network connection!"));
                         break;
                     case EMErrorServerNotReachable:
